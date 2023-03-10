@@ -1,0 +1,6 @@
+1. Keypad: (Row pins: 18,19,23,25 Column pins: 26,27,32,33)  
+2. LCD: (SDA: 21, SCL: 22)   
+3. RTC: (SDA: 21, SCL: 22)   
+4. GSM: (GSM RX: 5 --> UART 1 remapped in software)    
+5. HC12: (HC12 TX: 16, HC12 RX: 17 --> UART 2)  
+ 

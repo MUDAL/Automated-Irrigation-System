@@ -1,0 +1,6 @@
+1. Soil sensor: (A0)
+2. HC12: (HC12 Tx: 2, HC12 Rx: 3)  
+3. BME280 (SDA: A4, SCL: A5)  
+4. Solenoid valve (4)
+5. HCSR04 (Trig: 9, Echo: 10)
+6. Battery voltage measurement (A1)
