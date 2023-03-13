@@ -55,6 +55,9 @@ The water level detector simply checks the level of water in the tank. As explai
 it is merged with the node. If there's a critical condition, a message is sent to the master wirelessly  
 (via Sub-GHz radio). The master will then send an SMS to the user.  
 
+## Software architecture  
+![ss_sl drawio](https://user-images.githubusercontent.com/46250887/224769995-1d8432c9-96d5-4adb-b228-826eac6d4588.png)  
+
 ## Mobile Application  
 The sensor data from the irrigation system is sent to an MQTT broker. The ``HiveMQ`` broker was used in this  
 project. The user can use a mobile application (MQTT client) that is linked to the broker to visualize the  
