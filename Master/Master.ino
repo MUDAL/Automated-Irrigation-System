@@ -35,23 +35,19 @@ WiFiManagerParameter country("2","Country code","",SIZE_COUNTRY_CODE);
 WiFiManagerParameter weatherApiKey("3","OpenWeather.org API key","",SIZE_API_KEY);
 WiFiManagerParameter pubTopic("4","HiveMQ Publish topic","",SIZE_TOPIC);
 WiFiManagerParameter subTopic("5","HiveMQ Subscription topic","",SIZE_TOPIC);
-
-//Object(s)
 Preferences preferences; //for accessing ESP32 flash memory
 
 //Task handle(s)
 TaskHandle_t wifiTaskHandle;
 TaskHandle_t forecastTaskHandle;
 
-//Shared resources between application and weather forecast tasks.
+//Shared resources
 uint8_t probOfPrecip = 0;
 bool forecastReceived = false;
-//Shared resources between application and MQTT tasks.
 uint8_t soilMoisture = 0;
 uint8_t temperature = 0;
 uint8_t humidity = 0;
-//Shared resource(s) between application task and MQTT callback
-uint8_t irrigCmd = 0;
+uint8_t irrigCmd = 0; 
 
 /**
  * @brief Make an HTTP GET request to the specified server
@@ -235,6 +231,32 @@ static void SendTextMsgForCriticalEvent(SIM800L& gsm,
   }  
 }
 
+/**
+ * @brief Converts an integer to a string.
+*/
+static void IntegerToString(uint32_t integer,char* stringPtr)
+{
+  if(integer == 0)
+  {  
+    stringPtr[0] = '0';
+    return;
+  }
+  uint32_t integerCopy = integer;
+  uint8_t numOfDigits = 0;
+
+  while(integerCopy > 0)
+  {
+    integerCopy /= 10;
+    numOfDigits++;
+  }
+  while(integer > 0)
+  {
+    stringPtr[numOfDigits - 1] = '0' + (integer % 10);
+    integer /= 10;
+    numOfDigits--;
+  }
+}
+
 void setup() 
 {
   // put your setup code here, to run once:
@@ -375,6 +397,7 @@ void MqttTask(void* pvParameters)
 */
 void WeatherForecastTask(void* pvParameters)
 {
+  static char serverPath[300];
   char prevCity[SIZE_CITY_NAME] = {0};
   char prevCountry[SIZE_COUNTRY_CODE] = {0};
   char prevWeatherApiKey[SIZE_API_KEY] = {0}; 
@@ -396,13 +419,22 @@ void WeatherForecastTask(void* pvParameters)
         preferences.getBytes("2",prevCountry,SIZE_COUNTRY_CODE);  
         preferences.getBytes("3",prevWeatherApiKey,SIZE_API_KEY);    
     
-        String serverPath = "http://api.openweathermap.org/data/2.5/forecast?q=" +
-                            String(prevCity) + "," + String(prevCountry) + "&cnt=" +
-                            String(numOfForecasts) + "&appid=" + String(prevWeatherApiKey);
-
-        jsonBuffer = HttpGetRequest(serverPath.c_str(),&httpCode);
+        char numOfForecastsBuff[3] = {0};
+        IntegerToString(numOfForecasts,numOfForecastsBuff);
+        strcat(serverPath,"http://api.openweathermap.org/data/2.5/forecast?q=");
+        strcat(serverPath,prevCity);
+        strcat(serverPath,",");
+        strcat(serverPath,prevCountry);
+        strcat(serverPath,"&cnt=");
+        strcat(serverPath,numOfForecastsBuff);
+        strcat(serverPath,"&appid=");
+        strcat(serverPath,prevWeatherApiKey);
+        
+        jsonBuffer = HttpGetRequest(serverPath,&httpCode);
         JSONVar jsonObject = JSON.parse(jsonBuffer);
-
+        uint32_t serverPathLen = strlen(serverPath);
+        memset(serverPath,'\0',serverPathLen);
+      
         if(httpCode == HTTP_CODE_OK)
         {
           probOfPrecip = GetPoP(jsonObject,numOfForecasts); 

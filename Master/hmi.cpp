@@ -11,6 +11,21 @@ const uint8_t minRow = 0;
 const uint8_t maxRow = 1;
 const uint8_t numOfRows = 2;
 
+/**
+ * @brief Converts a string to an 8-bit integer.
+*/
+void StringTo8BitInteger(char* stringPtr,uint8_t* integerPtr)
+{
+  *integerPtr = 0;
+  uint8_t len = strlen(stringPtr);
+  uint32_t j = 1;
+  for(uint8_t i = 0; i < len; i++)
+  {
+    *integerPtr += ((stringPtr[len - i - 1] - '0') * j);
+    j *= 10;
+  }
+}
+
 void HMI::AlignData(uint8_t param)
 {
   if(param < 10)
@@ -37,9 +52,7 @@ void HMI::SetParam(uint8_t* paramPtr,char* paramBuffer,uint8_t paramColumn)
     if(isdigit(key))
     {
       HMI::StoreKey(key,paramBuffer,2);
-      //convert char buffer to int
-      String str = String(paramBuffer);
-      *paramPtr = str.toInt();
+      StringTo8BitInteger(paramBuffer,paramPtr);
       lcdPtr->setCursor(paramColumn,currentRow);
       HMI::AlignData(*paramPtr);
     }
