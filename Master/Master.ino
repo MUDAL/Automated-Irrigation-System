@@ -346,7 +346,8 @@ void MqttTask(void* pvParameters)
 {
   static WiFiClient wifiClient;
   static PubSubClient mqttClient(wifiClient);
-
+  static char dataToPublish[120];
+  
   char prevPubTopic[SIZE_TOPIC] = {0};
   char prevSubTopic[SIZE_TOPIC] = {0};
   const char *mqttBroker = "broker.hivemq.com";
@@ -377,10 +378,27 @@ void MqttTask(void* pvParameters)
       {
         if((millis() - prevTime) >= 500)
         {
-          String dataToPublish = "Moist: " + String(soilMoisture) +  " %\n" +
-                                 "Temp:  " + String(temperature) + " C\n" +
-                                 "Humid: " + String(humidity) + " %";
-          mqttClient.publish(prevSubTopic,dataToPublish.c_str());
+          char soilMoistureBuff[3] = {0};
+          char temperatureBuff[3] = {0};
+          char humidityBuff[3] = {0};
+          
+          IntegerToString(soilMoisture,soilMoistureBuff);
+          IntegerToString(temperature,temperatureBuff);
+          IntegerToString(humidity,humidityBuff);
+
+          strcat(dataToPublish,"Moist: ");
+          strcat(dataToPublish,soilMoistureBuff);
+          strcat(dataToPublish," %\n");
+          strcat(dataToPublish,"Temp: ");
+          strcat(dataToPublish,temperatureBuff);
+          strcat(dataToPublish," C\n");
+          strcat(dataToPublish,"Humid: ");
+          strcat(dataToPublish,humidityBuff);
+          strcat(dataToPublish," %");
+          
+          mqttClient.publish(prevSubTopic,dataToPublish);
+          uint32_t dataLen = strlen(dataToPublish);
+          memset(dataToPublish,'\0',dataLen);
           prevTime = millis();
         }
         mqttClient.loop(); //handles mqtt callback
