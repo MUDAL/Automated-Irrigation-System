@@ -386,13 +386,13 @@ void MqttTask(void* pvParameters)
           IntegerToString(temperature,temperatureBuff);
           IntegerToString(humidity,humidityBuff);
 
-          strcat(dataToPublish,"Moist: ");
+          strcat(dataToPublish,"MOIST: ");
           strcat(dataToPublish,soilMoistureBuff);
           strcat(dataToPublish," %\n");
-          strcat(dataToPublish,"Temp: ");
+          strcat(dataToPublish,"TEMP: ");
           strcat(dataToPublish,temperatureBuff);
           strcat(dataToPublish," C\n");
-          strcat(dataToPublish,"Humid: ");
+          strcat(dataToPublish,"HUMID: ");
           strcat(dataToPublish,humidityBuff);
           strcat(dataToPublish," %");
           
