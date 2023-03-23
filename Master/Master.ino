@@ -19,14 +19,13 @@
 #define ARDUINO_RUNNING_CORE  1
 #endif
 
-//Defines
+//Maximum number of characters
 #define SIZE_PHONE_NUM        15
-//Maximum number of characters for OpenWeatherMap.org credentials
 #define SIZE_CITY_NAME        20
 #define SIZE_COUNTRY_CODE      5
 #define SIZE_API_KEY          50
-//Maximum number of characters for HiveMQ Publish and Subscribe topics
 #define SIZE_TOPIC            30
+#define SIZE_CLIENT_ID        23
 
 //Define textboxes for parameters to be provisioned via the captive portal
 WiFiManagerParameter phoneNum("0","Phone (incl. +234)","",SIZE_PHONE_NUM);
@@ -35,6 +34,7 @@ WiFiManagerParameter country("2","Country code","",SIZE_COUNTRY_CODE);
 WiFiManagerParameter weatherApiKey("3","OpenWeather.org API key","",SIZE_API_KEY);
 WiFiManagerParameter pubTopic("4","HiveMQ Publish topic","",SIZE_TOPIC);
 WiFiManagerParameter subTopic("5","HiveMQ Subscription topic","",SIZE_TOPIC);
+WiFiManagerParameter clientID("A","MQTT client ID","",SIZE_CLIENT_ID);
 Preferences preferences; //for accessing ESP32 flash memory
 
 //Task handle(s)
@@ -291,7 +291,8 @@ void WiFiManagementTask(void* pvParameters)
   wm.addParameter(&country);
   wm.addParameter(&weatherApiKey); 
   wm.addParameter(&pubTopic);
-  wm.addParameter(&subTopic);   
+  wm.addParameter(&subTopic); 
+  wm.addParameter(&clientID);  
   wm.setConfigPortalBlocking(false);
   wm.setSaveParamsCallback(WiFiManagerCallback);   
   //Auto-connect to previous network if available.
@@ -350,6 +351,7 @@ void MqttTask(void* pvParameters)
   
   char prevPubTopic[SIZE_TOPIC] = {0};
   char prevSubTopic[SIZE_TOPIC] = {0};
+  char prevClientID[SIZE_CLIENT_ID] = {0};
   const char *mqttBroker = "broker.hivemq.com";
   const uint16_t mqttPort = 1883;  
   uint32_t prevTime = millis();
@@ -360,14 +362,17 @@ void MqttTask(void* pvParameters)
     {       
       if(!mqttClient.connected())
       {
+        memset(prevPubTopic,'\0',SIZE_TOPIC);
+        memset(prevSubTopic,'\0',SIZE_TOPIC);
+        memset(prevClientID,'\0',SIZE_CLIENT_ID);
         preferences.getBytes("4",prevPubTopic,SIZE_TOPIC);  
         preferences.getBytes("5",prevSubTopic,SIZE_TOPIC);
+        preferences.getBytes("A",prevClientID,SIZE_CLIENT_ID);
         mqttClient.setServer(mqttBroker,mqttPort);
         mqttClient.setCallback(MqttCallback);
         while(!mqttClient.connected())
         {
-          String clientID = String(WiFi.macAddress());
-          if(mqttClient.connect(clientID.c_str()))
+          if(mqttClient.connect(prevClientID))
           {
             Serial.println("Connected to HiveMQ broker");
             mqttClient.subscribe(prevPubTopic);
@@ -636,13 +641,15 @@ void WiFiManagerCallback(void)
   char prevWeatherApiKey[SIZE_API_KEY] = {0}; 
   char prevPubTopic[SIZE_TOPIC] = {0};
   char prevSubTopic[SIZE_TOPIC] = {0};
-
+  char prevClientID[SIZE_CLIENT_ID] = {0};
+  
   preferences.getBytes("0",prevPhoneNum,SIZE_PHONE_NUM);
   preferences.getBytes("1",prevCity,SIZE_CITY_NAME);
   preferences.getBytes("2",prevCountry,SIZE_COUNTRY_CODE);  
   preferences.getBytes("3",prevWeatherApiKey,SIZE_API_KEY);
   preferences.getBytes("4",prevPubTopic,SIZE_TOPIC);  
   preferences.getBytes("5",prevSubTopic,SIZE_TOPIC);  
+  preferences.getBytes("A",prevClientID,SIZE_CLIENT_ID);
 
   StoreNewFlashData("0",phoneNum.getValue(),prevPhoneNum,SIZE_PHONE_NUM);
   StoreNewFlashData("1",city.getValue(),prevCity,SIZE_CITY_NAME);
@@ -650,6 +657,7 @@ void WiFiManagerCallback(void)
   StoreNewFlashData("3",weatherApiKey.getValue(),prevWeatherApiKey,SIZE_API_KEY);  
   StoreNewFlashData("4",pubTopic.getValue(),prevPubTopic,SIZE_TOPIC);
   StoreNewFlashData("5",subTopic.getValue(),prevSubTopic,SIZE_TOPIC);
+  StoreNewFlashData("A",clientID.getValue(),prevClientID,SIZE_CLIENT_ID);
 }
 
 /**
