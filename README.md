@@ -70,8 +70,8 @@ sensor data. The ``MQTT Dashboard`` app from playstore was used. Details of the 
 The application (MQTT client) is configured as follows:  
 - Subscription topic: Same as the topic configured during Wi-Fi provisioning
 - Publish topic: Same as the topic configured during Wi-Fi provisioning
-- Start button: To enable irrigation. It publishes data (i.e. a ``payload`` of `` `1` `` to the ``Publish topic``)  
-- Stop buttton: To disable irrigation. It publishes data (i.e. a ``payload`` of `` `1` `` to the ``Publish topic``)
+- Start button: To enable irrigation. It publishes data (i.e. a ``payload`` of `` '1' `` to the ``Publish topic``)  
+- Stop buttton: To disable irrigation. It publishes data (i.e. a ``payload`` of `` '1' `` to the ``Publish topic``)
 - Text box: To display data. It subscribes to the ``Subscription topic``.   
 
 ## Tasks  
