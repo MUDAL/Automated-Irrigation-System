@@ -67,6 +67,13 @@ sensor data. The ``MQTT Dashboard`` app from playstore was used. Details of the 
 - Address: tcp://broker.hivemq.com  
 - Port: 1883  
 
+The application (MQTT client) is configured as follows:  
+- Subscription topic: Same as the topic configured during Wi-Fi provisioning
+- Publish topic: Same as the topic configured during Wi-Fi provisioning
+- Start button: To enable irrigation. It publishes data (i.e. a ``payload`` of `` '1' `` to the ``Publish topic``)  
+- Stop buttton: To disable irrigation. It publishes data (i.e. a ``payload`` of `` '0' `` to the ``Publish topic``)
+- Text box: To display data. It subscribes to the ``Subscription topic``.   
+
 ## Tasks  
 1. Getting weather forecast from ``OpenWeatherMap.org`` with an ``ESP32`` [DONE]        
 2. Testing ``moisture sensor`` [DONE]    
@@ -84,19 +91,22 @@ sensor data. The ``MQTT Dashboard`` app from playstore was used. Details of the 
 11. Battery monitoring for the node [DONE]    
 
 ## Images of the prototypes
+![20230408_114212](https://user-images.githubusercontent.com/46250887/230763241-ff751680-f3bf-472a-a32d-2395808fdcdb.jpg)  
+![20230408_114132](https://user-images.githubusercontent.com/46250887/230763270-3a0bf62c-e23b-472f-9812-4653e6b8b9cd.jpg)   
 ![20230214_100111](https://user-images.githubusercontent.com/46250887/218693879-73e67614-5af9-423c-8325-8bc9774a5427.jpg)
 ![20230214_100123](https://user-images.githubusercontent.com/46250887/218694133-0fc30c0f-23cc-47db-8af6-e70f6a2a6c4d.jpg)
 ![20230214_100029](https://user-images.githubusercontent.com/46250887/218694005-0c281f36-b9c9-49fc-a606-627eb4c2ca4c.jpg)
 ![20230208_085441](https://user-images.githubusercontent.com/46250887/217487152-40a2b927-eecf-4694-b2be-4e5b8109bda4.jpg)  
 ![20230208_085742](https://user-images.githubusercontent.com/46250887/217489647-36b613c2-e0d3-4223-aa7e-426ae2b9ebce.jpg)  
 ![MQTT dashboard](https://user-images.githubusercontent.com/46250887/222798335-11319a68-478c-46b1-a83a-e7d2179cc261.jpg)  
+![20230408_164155](https://user-images.githubusercontent.com/46250887/230763356-eeeff724-2479-4ee6-bb76-c9c0a20ad5fb.jpg)  
 
 ## Observation  
 - The GND pin beside the 5v pin on some ESP32 boards isn't connected to the other GND pins because its supposed  
 to be the CMD pin. Hence this pin shouldn't be connected to the GND pin of other components without first performing   
 continuity tests with a multimeter.  
 - The Arduino Nano ADC doesn't work properly if the board is powered using Vin. This issue was solved by powering the board  
-through the 5v pin.   
+through the 5v pin.  
 
 ## Credits  
 1. OpenWeatherMap.org: https://RandomNerdTutorials.com/esp32-http-get-open-weather-map-thingspeak-arduino/   
