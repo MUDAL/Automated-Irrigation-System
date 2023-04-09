@@ -84,6 +84,9 @@ sensor data. The ``MQTT Dashboard`` app from playstore was used. Details of the 
 11. Battery monitoring for the node [DONE]    
 
 ## Images of the prototypes
+![20230408_114212](https://user-images.githubusercontent.com/46250887/230763241-ff751680-f3bf-472a-a32d-2395808fdcdb.jpg)  
+![20230408_114132](https://user-images.githubusercontent.com/46250887/230763270-3a0bf62c-e23b-472f-9812-4653e6b8b9cd.jpg)   
+
 ![20230214_100111](https://user-images.githubusercontent.com/46250887/218693879-73e67614-5af9-423c-8325-8bc9774a5427.jpg)
 ![20230214_100123](https://user-images.githubusercontent.com/46250887/218694133-0fc30c0f-23cc-47db-8af6-e70f6a2a6c4d.jpg)
 ![20230214_100029](https://user-images.githubusercontent.com/46250887/218694005-0c281f36-b9c9-49fc-a606-627eb4c2ca4c.jpg)
