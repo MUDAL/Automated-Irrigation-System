@@ -383,10 +383,14 @@ void MqttTask(void* pvParameters)
       {
         if((millis() - prevTime) >= 500)
         {
-          char soilMoistureBuff[3] = {0};
-          char temperatureBuff[3] = {0};
-          char humidityBuff[3] = {0};
-          
+          char soilMoistureBuff[4] = {0};
+          char temperatureBuff[4] = {0};
+          char humidityBuff[4] = {0};
+
+          if(soilMoisture > 100)
+          {
+            soilMoisture = 100;
+          }
           IntegerToString(soilMoisture,soilMoistureBuff);
           IntegerToString(temperature,temperatureBuff);
           IntegerToString(humidity,humidityBuff);
