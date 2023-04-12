@@ -102,6 +102,7 @@ static void IrrigateViaMqtt(masterData_t& masterData)
   static bool irrigStarted;
   uint16_t distance = GetDistance();
   bool isWaterLevelLow = (distance >= lowWaterLevel);
+  
   if(masterData.irrigCmd && !irrigStarted)
   {
     if(!isWaterLevelLow)
@@ -111,7 +112,7 @@ static void IrrigateViaMqtt(masterData_t& masterData)
       irrigStarted = true;
     }
   }
-  else if(masterData.irrigCmd && irrigStarted)
+  else if(!masterData.irrigCmd && irrigStarted)
   {
     digitalWrite(sValve,LOW);
     irrigStarted = false;
