@@ -99,16 +99,22 @@ static void IrrigateViaPoP(masterData_t& masterData)
 */
 static void IrrigateViaMqtt(masterData_t& masterData)
 {
+  static bool irrigStarted;
   uint16_t distance = GetDistance();
   bool isWaterLevelLow = (distance >= lowWaterLevel);
-  if(masterData.irrigCmd && !isWaterLevelLow)
+  if(masterData.irrigCmd && !irrigStarted)
   {
-    Serial.println("Valve ON via MQTT");
-    digitalWrite(sValve,HIGH);
+    if(!isWaterLevelLow)
+    {
+      Serial.println("Valve ON via MQTT");
+      digitalWrite(sValve,HIGH);
+      irrigStarted = true;
+    }
   }
-  else
+  else if(masterData.irrigCmd && irrigStarted)
   {
     digitalWrite(sValve,LOW);
+    irrigStarted = false;
   }
 }
 

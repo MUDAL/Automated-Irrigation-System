@@ -35,5 +35,5 @@ uint8_t SoilSensor::GetMoisture(void)
     averageRawData = rawDataInWater;
   }
   //Convert raw data to percent moisture by linear interpolation
-  return lround((4850 - 10*averageRawData) / 23.0);
+  return lround(100 + 100 * ((float)(averageRawData - rawDataInWater) / (rawDataInWater - rawDataInAir)));
 }
