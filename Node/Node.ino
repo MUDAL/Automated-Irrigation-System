@@ -30,14 +30,12 @@ const uint8_t battPin = A1;
 //[A container with a height in the range of 24-27cm is used]
 const uint8_t lowWaterLevel = 20; // >= 
 const uint8_t highWaterLevel = 5; // <=
-//Variables for periodic timing of irrigation functions
-uint32_t prevMqttTime = 0;
-uint32_t prevMoistureTime = 0;
 
 SoftwareSerial hc12Serial(hc12Tx,hc12Rx);
 HC12 hc12(&hc12Serial);
 SoilSensor soilSens(A0);
 Adafruit_BME280 bme;
+uint32_t prevTime = 0;
 
 /**
  * Get distance (in cm) measured by sensor.
@@ -55,78 +53,87 @@ static uint16_t GetDistance(void)
 }
 
 /**
- * @brief Handle irrigation based on probability of precipitation
+ * @brief Deactivate the solenoid valve if water level is low
 */
-static void IrrigateViaPoP(masterData_t& masterData)
+static void ShutValveIfLevelIsLow(bool& isWaterLevelLow,bool& isValveOn)
 {
-  static bool isValveOn;
-  
-  bool isMinIrrig = (masterData.probOfPrecip >= 50) && 
-                    (masterData.probOfPrecip < 70)  &&
-                    (masterData.currentHour == masterData.forecastHour) &&
-                    (masterData.currentMinute >= masterData.forecastMinute) &&
-                    (masterData.currentMinute < (masterData.forecastMinute + masterData.minIrrigTime));
-  
-  bool isMaxIrrig = (masterData.probOfPrecip < 50) && 
-                    (masterData.currentHour == masterData.forecastHour) &&
-                    (masterData.currentMinute >= masterData.forecastMinute) &&
-                    (masterData.currentMinute < (masterData.forecastMinute + masterData.maxIrrigTime));
-                    
-  if((isMinIrrig || isMaxIrrig) && !isValveOn)
+  if(isWaterLevelLow && isValveOn)
   {
-    //Debug
-    Serial.println("\n\n********************\n\n");
-    Serial.print("\n\nValve ON: ");
-    Serial.print(isMinIrrig);
-    Serial.print(' ');
-    Serial.println(isMaxIrrig);
-    
-    digitalWrite(sValve,HIGH);
-    isValveOn = true;
-  }
-
-  if(!isMinIrrig && !isMaxIrrig && isValveOn)
-  {
-    Serial.println("\n\n********************\n\n");
-    Serial.println("Valve OFF\n");
     digitalWrite(sValve,LOW);
     isValveOn = false;
   }  
 }
 
 /**
- * @brief Handle irrigation based on MQTT command
+ * @brief Handle irrigation based on probability of precipitation
 */
-static void IrrigateViaMqtt(masterData_t& masterData)
+static void IrrigateViaPoP(masterData_t& masterData,uint16_t& distance)
 {
-  static bool irrigStarted;
-  uint16_t distance = GetDistance();
+  static bool isValveOn;
+  bool isWaterLevelHigh = (distance <= highWaterLevel);
   bool isWaterLevelLow = (distance >= lowWaterLevel);
   
-  if(masterData.irrigCmd && !irrigStarted)
+  bool isMinIrrig = (masterData.probOfPrecip >= 50) && 
+                    (masterData.probOfPrecip < 70)  &&
+                    (masterData.currentHour == masterData.forecastHour) &&
+                    (masterData.currentMinute >= masterData.forecastMinute) &&
+                    (masterData.currentMinute < (masterData.forecastMinute + masterData.minIrrigTime)) &&
+                    !isWaterLevelLow && !isWaterLevelHigh;
+  
+  bool isMaxIrrig = (masterData.probOfPrecip < 50) && 
+                    (masterData.currentHour == masterData.forecastHour) &&
+                    (masterData.currentMinute >= masterData.forecastMinute) &&
+                    (masterData.currentMinute < (masterData.forecastMinute + masterData.maxIrrigTime)) &&
+                    isWaterLevelHigh;
+                    
+  if((isMinIrrig || isMaxIrrig) && !isValveOn)
   {
-    if(!isWaterLevelLow)
-    {
-      Serial.println("Valve ON via MQTT");
-      digitalWrite(sValve,HIGH);
-      irrigStarted = true;
-    }
+    digitalWrite(sValve,HIGH);
+    isValveOn = true;
   }
-  else if(!masterData.irrigCmd && irrigStarted)
+
+  if(!isMinIrrig && !isMaxIrrig && isValveOn)
   {
     digitalWrite(sValve,LOW);
-    irrigStarted = false;
+    isValveOn = false;
+  }  
+  ShutValveIfLevelIsLow(isWaterLevelLow,isValveOn);
+}
+
+/**
+ * @brief Handle irrigation based on MQTT command
+*/
+static void IrrigateViaMqtt(masterData_t& masterData,uint16_t& distance)
+{
+  static bool isValveOn;
+  const uint8_t valveOffCmd = 0;
+  const uint8_t valveOnCmd = 1;
+  bool isWaterLevelLow = (distance >= lowWaterLevel);
+  
+  switch(masterData.irrigCmd)
+  {
+    case valveOffCmd:
+      digitalWrite(sValve,LOW);
+      isValveOn = false;
+      break;
+    case valveOnCmd:
+      if(!isWaterLevelLow)
+      {
+        digitalWrite(sValve,HIGH);
+        isValveOn = true;
+      }
+      break;
   }
+  ShutValveIfLevelIsLow(isWaterLevelLow,isValveOn);
 }
 
 /**
  * @brief Handle evening irrigation [via sensor]
 */
-static void IrrigateViaSensor(masterData_t& masterData,uint8_t moisture)
+static void IrrigateViaSensor(masterData_t& masterData,uint16_t& distance,uint8_t& moisture)
 {
   static uint8_t startingIrrigMinute;
   static bool isValveOn;
-  uint16_t distance = GetDistance();
   bool isWaterLevelHigh = (distance <= highWaterLevel);
   bool isWaterLevelLow = (distance >= lowWaterLevel);
   //Start irrigation at appropriate time [6pm]
@@ -157,12 +164,7 @@ static void IrrigateViaSensor(masterData_t& masterData,uint8_t moisture)
   }
   //Failsafe [ensure the valve is switched off if water level is low]
   //Sometimes, the sensor can give false triggers. This code block prevents such.
-  if(isWaterLevelLow && isValveOn)
-  {
-    Serial.println("\n\n\n\n\n\n****FAILSAFE SENSOR VALVE OFF*****\n\n\n\n\n\n");
-    digitalWrite(sValve,LOW);
-    isValveOn = false;
-  }
+  ShutValveIfLevelIsLow(isWaterLevelLow,isValveOn);
 }
 
 /**
@@ -184,20 +186,14 @@ static uint8_t GetBatteryLevel(void)
   uint32_t averageADC = 0;
   int32_t battLevel = 0;
 
-  Serial.print("Batt ADC: ");
   for(uint8_t i = 0; i < numOfSamples; i++)
   {
     averageADC += analogRead(battPin);
   }
   averageADC = lround((float)averageADC / numOfSamples);
-  Serial.println(averageADC);
   
   float voltDivOutput = 5*(averageADC / 1024.0);
-  Serial.print("Voltage divider output = ");
-  Serial.println(voltDivOutput);
   float battVoltage = voltDivOutput * 3;
-  Serial.print("Battery voltage = ");
-  Serial.println(battVoltage);
   //Encode battery level(or voltage)
   battLevel = lround(10*battVoltage);
   return battLevel;
@@ -216,8 +212,7 @@ void setup()
   //Ultrasonic sensor
   pinMode(trigPin,OUTPUT);
   pinMode(echoPin,INPUT);
-  prevMqttTime = millis();
-  prevMoistureTime = millis();
+  prevTime = millis();
 }
 
 void loop() 
@@ -240,7 +235,7 @@ void loop()
       masterData.irrigCmd = hc12.DecodeData(HC12::RxDataId::IRRIG_CMD);
       masterData.currentHour = hc12.DecodeData(HC12::RxDataId::CURRENT_HOUR);
       masterData.currentMinute = hc12.DecodeData(HC12::RxDataId::CURRENT_MINUTE);
-           
+      
       Serial.println(masterData.minMoist);
       Serial.println(masterData.maxMoist);
       Serial.println(masterData.minIrrigTime);
@@ -259,6 +254,8 @@ void loop()
       uint16_t distance = GetDistance();
       bool isWaterLevelLow = (distance >= lowWaterLevel);
       uint8_t battLevel = GetBatteryLevel();
+
+      IrrigateViaMqtt(masterData,distance);
       
       hc12.EncodeData(HC12::ACK,HC12::TxDataId::DATA_ACK);
       hc12.EncodeData(moisture,HC12::TxDataId::NODE_MOIST);
@@ -271,16 +268,13 @@ void loop()
       hc12.TransmitData();
     }
   }
-  //Handle different methods of irrigation when appropriate
-  if((millis() - prevMqttTime) >= 50)
+  
+  if((millis() - prevTime) >= 150)
   {
-    IrrigateViaMqtt(masterData);
-    prevMqttTime = millis();
+    uint8_t moisture = soilSens.GetMoisture();
+    uint16_t distance = GetDistance();
+    IrrigateViaSensor(masterData,distance,moisture); 
+    IrrigateViaPoP(masterData,distance);
+    prevTime = millis();
   }
-  if((millis() - prevMoistureTime) >= 100)
-  {
-    IrrigateViaSensor(masterData,soilSens.GetMoisture()); 
-    prevMoistureTime = millis();
-  }
-  IrrigateViaPoP(masterData);
 }

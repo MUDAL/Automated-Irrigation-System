@@ -41,13 +41,13 @@ Preferences preferences; //for accessing ESP32 flash memory
 TaskHandle_t wifiTaskHandle;
 TaskHandle_t forecastTaskHandle;
 
-//Shared resources
+const uint8_t idleIrrigCmd = 255;
 uint8_t probOfPrecip = 0;
 bool forecastReceived = false;
 uint8_t soilMoisture = 0;
 uint8_t temperature = 0;
 uint8_t humidity = 0;
-uint8_t irrigCmd = 0; 
+uint8_t irrigCmd = idleIrrigCmd; 
 
 /**
  * @brief Make an HTTP GET request to the specified server
@@ -507,7 +507,7 @@ void ApplicationTask(void* pvParameters)
   const uint8_t lowNodeBattLevel = 102; 
   uint8_t rowPins[NUMBER_OF_ROWS] = {18,19,23,25};  
   uint8_t columnPins[NUMBER_OF_COLUMNS] = {26,27,32,33};  
-  const uint32_t smsInterval = 10000; //milliseconds
+  const uint32_t smsInterval = 20000; //milliseconds
   
   static LiquidCrystal_I2C lcd(0x27,16,2);
   static Keypad keypad(rowPins,columnPins); 
@@ -579,7 +579,7 @@ void ApplicationTask(void* pvParameters)
     }
     
     //Encode data and send to node (periodically)
-    if((millis() - prevTime) >= 1200)
+    if((millis() - prevTime) >= 2500)
     { 
       hc12.EncodeData(HC12::QUERY,HC12::TxDataId::DATA_QUERY);
       for(uint8_t i = 0; i < numOfHmiConfigParams; i++)
@@ -597,7 +597,8 @@ void ApplicationTask(void* pvParameters)
       hc12.EncodeData(irrigCmd,HC12::TxDataId::IRRIG_CMD); 
       hc12.EncodeData(currentHour,HC12::TxDataId::CURRENT_HOUR);
       hc12.EncodeData(currentMin,HC12::TxDataId::CURRENT_MINUTE);
-      hc12.TransmitData(); 
+      hc12.TransmitData();
+      irrigCmd = idleIrrigCmd; 
       prevTime = millis();
     }
 
