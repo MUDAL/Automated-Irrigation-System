@@ -29,7 +29,6 @@ const uint8_t battPin = A1;
 //Water levels of tank used [Depends on type of container used]
 //[A container with a height in the range of 24-27cm is used]
 const uint8_t lowWaterLevel = 20; // >= 
-const uint8_t highWaterLevel = 5; // <=
 
 SoftwareSerial hc12Serial(hc12Tx,hc12Rx);
 HC12 hc12(&hc12Serial);
@@ -70,21 +69,18 @@ static void ShutValveIfLevelIsLow(bool& isWaterLevelLow,bool& isValveOn)
 static void IrrigateViaPoP(masterData_t& masterData,uint16_t& distance)
 {
   static bool isValveOn;
-  bool isWaterLevelHigh = (distance <= highWaterLevel);
   bool isWaterLevelLow = (distance >= lowWaterLevel);
   
   bool isMinIrrig = (masterData.probOfPrecip >= 50) && 
                     (masterData.probOfPrecip < 70)  &&
                     (masterData.currentHour == masterData.forecastHour) &&
                     (masterData.currentMinute >= masterData.forecastMinute) &&
-                    (masterData.currentMinute < (masterData.forecastMinute + masterData.minIrrigTime)) &&
-                    !isWaterLevelLow && !isWaterLevelHigh;
+                    (masterData.currentMinute < (masterData.forecastMinute + masterData.minIrrigTime));
   
   bool isMaxIrrig = (masterData.probOfPrecip < 50) && 
                     (masterData.currentHour == masterData.forecastHour) &&
                     (masterData.currentMinute >= masterData.forecastMinute) &&
-                    (masterData.currentMinute < (masterData.forecastMinute + masterData.maxIrrigTime)) &&
-                    isWaterLevelHigh;
+                    (masterData.currentMinute < (masterData.forecastMinute + masterData.maxIrrigTime));
                     
   if((isMinIrrig || isMaxIrrig) && !isValveOn)
   {
@@ -134,36 +130,36 @@ static void IrrigateViaSensor(masterData_t& masterData,uint16_t& distance,uint8_
 {
   static uint8_t startingIrrigMinute;
   static bool isValveOn;
-  bool isWaterLevelHigh = (distance <= highWaterLevel);
+  static bool isMoistureLow;
+  static bool isMoistureMid;
   bool isWaterLevelLow = (distance >= lowWaterLevel);
   //Start irrigation at appropriate time [6pm]
-  bool isTimeForIrrig = (moisture <= masterData.minMoist) &&
-                        !isWaterLevelLow &&
-                        (masterData.currentHour == 18) &&
+  bool isTimeForIrrig = (masterData.currentHour == 18) &&
                         (masterData.currentMinute == 0);
                         
-  bool isMaxIrrigDone = isValveOn && isWaterLevelHigh && 
+  bool isMaxIrrigDone = isValveOn && isMoistureLow && 
                         (masterData.currentMinute >= (startingIrrigMinute + masterData.maxIrrigTime));
                         
-  bool isMinIrrigDone =  isValveOn && !isWaterLevelHigh && !isWaterLevelLow &&
+  bool isMinIrrigDone =  isValveOn && isMoistureMid &&
                         (masterData.currentMinute >= (startingIrrigMinute + masterData.minIrrigTime));
                         
   if(isTimeForIrrig && !isValveOn)
   {
-    startingIrrigMinute = masterData.currentMinute;
-    Serial.println("\n\n\n\n\n\n****SENSOR VALVE ON*****\n\n\n\n\n\n");
-    digitalWrite(sValve,HIGH);
-    isValveOn = true;
+    isMoistureLow = moisture <= masterData.minMoist;
+    isMoistureMid = (moisture > masterData.minMoist) && (moisture < masterData.maxMoist);
+    if(isMoistureLow || isMoistureMid)
+    {
+      startingIrrigMinute = masterData.currentMinute;
+      digitalWrite(sValve,HIGH);
+      isValveOn = true; 
+    }
   }
   //Stopping irrigation using tank's water level and programmed irrigation duration
   if(isMaxIrrigDone || isMinIrrigDone)
   {
-    Serial.println("\n\n\n\n\n\n****SENSOR VALVE OFF*****\n\n\n\n\n\n");
     digitalWrite(sValve,LOW);
     isValveOn = false;
   }
-  //Failsafe [ensure the valve is switched off if water level is low]
-  //Sometimes, the sensor can give false triggers. This code block prevents such.
   ShutValveIfLevelIsLow(isWaterLevelLow,isValveOn);
 }
 
@@ -192,10 +188,10 @@ static uint8_t GetBatteryLevel(void)
   }
   averageADC = lround((float)averageADC / numOfSamples);
   
-  float voltDivOutput = 5*(averageADC / 1024.0);
+  float voltDivOutput = 5 * (averageADC / 1024.0);
   float battVoltage = voltDivOutput * 3;
   //Encode battery level(or voltage)
-  battLevel = lround(10*battVoltage);
+  battLevel = lround(10* battVoltage);
   return battLevel;
 }
 
