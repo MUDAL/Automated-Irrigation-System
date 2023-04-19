@@ -191,7 +191,7 @@ static uint8_t GetBatteryLevel(void)
   float voltDivOutput = 5 * (averageADC / 1024.0);
   float battVoltage = voltDivOutput * 3;
   //Encode battery level(or voltage)
-  battLevel = lround(10* battVoltage);
+  battLevel = lround(10 * battVoltage);
   return battLevel;
 }
 
